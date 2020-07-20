@@ -1,4 +1,4 @@
-import union from 'lodash-es/union';
+import { union } from 'lodash';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function serializable<T>(obj: any) {

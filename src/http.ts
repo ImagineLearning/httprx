@@ -1,44 +1,55 @@
-import isEmpty from 'lodash-es/isEmpty';
+import produce from 'immer';
+import { isEmpty } from 'lodash';
 import { fromFetch } from 'rxjs/fetch';
 import { switchMap } from 'rxjs/operators';
 import { serializable } from './utils';
 
-export class Http {
-	private _body?: object | string;
-	private _headers: { [key: string]: string } = {};
-	private _query?: string;
-	private _url?: string;
+type HttpConfig = {
+	body?: object | string;
+	headers: { [key: string]: string };
+	query?: string;
+	url?: string;
+};
 
-	constructor(url?: string) {
-		this._url = url;
+export class Http {
+	private configuration: HttpConfig = { headers: {} };
+
+	constructor(config: HttpConfig) {
+		this.configuration = config;
 	}
 
 	bearer(token?: string) {
 		if (!token) {
 			return this;
 		}
-		this._headers['Authorization'] = `Bearer ${token}`;
-		return this;
+		const config = produce(this.configuration, draft => {
+			draft.headers['Authorization'] = `Bearer ${token}`;
+		});
+		return new Http(config);
 	}
 
 	body(content: object | string) {
-		this._body = content;
-		return this;
+		const config = { ...this.configuration, body: content };
+		return new Http(config);
 	}
 
 	contentType(type: string) {
-		this._headers['Content-Type'] = type;
-		return this;
+		const config = produce(this.configuration, draft => {
+			draft.headers['Content-Type'] = type;
+		});
+		return new Http(config);
 	}
 
 	get<T>() {
-		const headers = isEmpty(this._headers) ? undefined : this._headers;
+		const headers = isEmpty(this.configuration.headers) ? undefined : this.configuration.headers;
 		return httpRequest<T>(this.getFullUrl(), { headers, method: 'GET' });
 	}
 
 	header(name: string, value: string) {
-		this._headers[name] = value;
-		return this;
+		const config = produce(this.configuration, draft => {
+			draft.headers[name] = value;
+		});
+		return new Http(config);
 	}
 
 	post<T>() {
@@ -50,29 +61,31 @@ export class Http {
 	}
 
 	query(query: URLSearchParams | { [key: string]: string | string[] | boolean | number } | string) {
-		if (query instanceof URLSearchParams) {
-			this._query = (query as URLSearchParams).toString();
-		} else if (typeof query === 'string') {
-			this._query = query;
-		} else {
-			const params = new URLSearchParams();
-			Object.keys(query).forEach(key => {
-				if (Array.isArray(query[key])) {
-					(query[key] as string[]).forEach(param => {
-						params.append(key, param);
-					});
-				} else {
-					params.append(key, query[key] as string);
-				}
-			});
-			this._query = params.toString();
-		}
-		return this;
+		const config = produce(this.configuration, draft => {
+			if (query instanceof URLSearchParams) {
+				draft.query = (query as URLSearchParams).toString();
+			} else if (typeof query === 'string') {
+				draft.query = query;
+			} else {
+				const params = new URLSearchParams();
+				Object.keys(query).forEach(key => {
+					if (Array.isArray(query[key])) {
+						(query[key] as string[]).forEach(param => {
+							params.append(key, param);
+						});
+					} else {
+						params.append(key, query[key] as string);
+					}
+				});
+				draft.query = params.toString();
+			}
+		});
+		return new Http(config);
 	}
 
 	url(url: string) {
-		this._url = url;
-		return this;
+		const config = { ...this.configuration, url };
+		return new Http(config);
 	}
 
 	/**
@@ -80,38 +93,40 @@ export class Http {
 	 */
 
 	private getFullUrl() {
-		let url = this._url || '';
-		if (this._query) {
+		let { url = '' } = this.configuration;
+		if (this.configuration.query) {
 			url += url.indexOf('?') < 0 ? '?' : '&';
-			url += this._query;
+			url += this.configuration.query;
 		}
 		return url;
 	}
 
 	private putOrPost<T>(method: 'PUT' | 'POST') {
-		const headers = isEmpty(this._headers) ? {} : this._headers;
+		const headers = isEmpty(this.configuration.headers) ? {} : { ...this.configuration.headers };
 		if (!headers['Content-Type']) {
 			headers['Content-Type'] = 'application/json';
 		}
 		let body = '';
-		if (this._body && typeof this._body === 'object') {
-			if (this._headers['Content-Type'] === 'application/x-www-form-urlencoded') {
+		if (this.configuration.body && typeof this.configuration.body === 'object') {
+			if (headers['Content-Type'] === 'application/x-www-form-urlencoded') {
 				const encoded = new URLSearchParams();
-				Object.keys(this._body).forEach(key =>
+				Object.keys(this.configuration.body).forEach(key =>
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					encoded.append(key, (this._body as any)[key])
+					encoded.append(key, (this.configuration.body as any)[key])
 				);
 				body = encoded.toString();
 			} else {
-				body = JSON.stringify(this._body);
+				body = JSON.stringify(this.configuration.body);
 			}
+		} else if (this.configuration.body && typeof this.configuration.body === 'string') {
+			body = this.configuration.body;
 		}
 		return httpRequest<T>(this.getFullUrl(), { body, headers, method });
 	}
 }
 
 export function http(url: string) {
-	return new Http(url);
+	return new Http({ headers: {}, url });
 }
 
 /**
@@ -122,6 +137,7 @@ function httpRequest<T>(url: string, options?: RequestInit) {
 	return fromFetch(url, options).pipe(
 		switchMap(async response => {
 			if (!response.ok) {
+				let error: Error | undefined;
 				try {
 					const body = await response.text();
 					/* eslint-disable @typescript-eslint/no-explicit-any */
@@ -132,9 +148,15 @@ function httpRequest<T>(url: string, options?: RequestInit) {
 						err[key] = serialized[key];
 					});
 					err.body = body;
-					throw err;
+					error = err;
 				} catch {
+					// Error parsing response, so we'll just throw the whole thing
 					throw response;
+				}
+				if (error) {
+					// We were able to extract the error details, so we'll throw this
+					// error object instead.
+					throw error;
 				}
 			}
 
