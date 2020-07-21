@@ -1,4 +1,4 @@
-# fetchrx
+# httprx
 
 A simple wrapper around RxJS's `fromFetch` function.
 

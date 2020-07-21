@@ -1,10 +1,10 @@
 {
-	"name": "@imaginelearning/fetchrx",
+	"name": "@imaginelearning/httprx",
 	"author": "Imagine Learning",
 	"version": "0.1.0",
 	"license": "MIT",
 	"main": "dist/index.js",
-	"module": "dist/fetchrx.esm.js",
+	"module": "dist/httprx.esm.js",
 	"typings": "dist/index.d.ts",
 	"files": [
 		"dist",
@@ -18,7 +18,8 @@
 		"build": "tsdx build",
 		"test": "tsdx test --watch",
 		"lint": "eslint \"src/**/*.{js,ts}\"",
-		"format": "prettier --config .prettierrc --write \"**/*.{js,json,ts}\""
+		"format": "prettier --config .prettierrc --write \"**/*.{js,json,ts}\"",
+		"prepack": "tsdx build"
 	},
 	"dependencies": {
 		"immer": "^7.0.5",
