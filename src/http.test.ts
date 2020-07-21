@@ -1,5 +1,5 @@
 import fetchMock from 'jest-fetch-mock';
-import { http } from './http';
+import { ContentTypes, http } from './http';
 
 describe('Http', () => {
 	const baseUrl = 'http://example.com';
@@ -60,7 +60,7 @@ describe('Http', () => {
 	describe('contentType(..)', () => {
 		it('sets header', done => {
 			http(baseUrl)
-				.contentType('text/plain')
+				.contentType(ContentTypes.Text)
 				.post()
 				.subscribe(() => {
 					const [, config] = fetchMock.mock.calls[0];
@@ -71,7 +71,7 @@ describe('Http', () => {
 
 		it("doesn't mutate Http instance", done => {
 			const original = http(baseUrl);
-			original.contentType('text/plain');
+			original.contentType(ContentTypes.Text);
 			original.post().subscribe(() => {
 				const [, config] = fetchMock.mock.calls[0];
 				expect(config?.headers).toEqual({ 'Content-Type': 'application/json' });
@@ -164,7 +164,7 @@ describe('Http', () => {
 
 		it("honors 'Content-Type' header if specified", done => {
 			http(baseUrl)
-				.contentType('text/plain')
+				.contentType(ContentTypes.Text)
 				.post()
 				.subscribe(() => {
 					const [, config] = fetchMock.mock.calls[0];
@@ -186,7 +186,7 @@ describe('Http', () => {
 
 		it("URL encodes body if 'Content-Type' specified as 'application/x-www.form-urlencoded'", done => {
 			http(baseUrl)
-				.contentType('application/x-www-form-urlencoded')
+				.contentType(ContentTypes.FormData)
 				.body({ foo: 'bar', baz: 'buzz' })
 				.post()
 				.subscribe(() => {
@@ -198,7 +198,7 @@ describe('Http', () => {
 
 		it('sends body as-is if not an object', done => {
 			http(baseUrl)
-				.contentType('text/plain')
+				.contentType(ContentTypes.Text)
 				.body('hello world')
 				.post()
 				.subscribe(() => {
@@ -302,7 +302,7 @@ describe('Http', () => {
 			fetchMock.once('{"hello":"world"}');
 			http(baseUrl)
 				.get<{ hello: string }>()
-				.subscribe(({ hello }) => {
+				.subscribe(({ data: { hello } }) => {
 					expect(hello).toEqual('world');
 					done();
 				}, done.fail);
@@ -312,8 +312,8 @@ describe('Http', () => {
 			fetchMock.once('hello world');
 			http(baseUrl)
 				.get<string>()
-				.subscribe(value => {
-					expect(value).toBe('hello world');
+				.subscribe(({ data }) => {
+					expect(data).toBe('hello world');
 					done();
 				}, done.fail);
 		});
@@ -328,9 +328,8 @@ describe('Http', () => {
 						done.fail();
 					},
 					error => {
-						const { body, ok, status } = error;
-						expect(body).toBe(JSON.stringify({ message: 'Server error' }));
-						expect(ok).toBe(false);
+						const { data, status } = error;
+						expect(data).toBe(JSON.stringify({ message: 'Server error' }));
 						expect(status).toBe(500);
 						done();
 					}

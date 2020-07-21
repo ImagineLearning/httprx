@@ -2,7 +2,12 @@ import produce from 'immer';
 import { isEmpty } from 'lodash';
 import { fromFetch } from 'rxjs/fetch';
 import { switchMap } from 'rxjs/operators';
-import { serializable } from './utils';
+
+export enum ContentTypes {
+	FormData = 'application/x-www-form-urlencoded',
+	JSON = 'application/json',
+	Text = 'text/plain'
+}
 
 type HttpConfig = {
 	body?: object | string;
@@ -10,6 +15,17 @@ type HttpConfig = {
 	query?: string;
 	url?: string;
 };
+
+type HttpResponse<T> = {
+	data: T;
+	headers: { [key: string]: string };
+	status: number;
+	statusText: string;
+	url: string;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type HttpError = Error & HttpResponse<any>;
 
 export class Http {
 	private configuration: HttpConfig = { headers: {} };
@@ -33,7 +49,7 @@ export class Http {
 		return new Http(config);
 	}
 
-	contentType(type: string) {
+	contentType(type: ContentTypes) {
 		const config = produce(this.configuration, draft => {
 			draft.headers['Content-Type'] = type;
 		});
@@ -104,11 +120,11 @@ export class Http {
 	private putOrPost<T>(method: 'PUT' | 'POST') {
 		const headers = isEmpty(this.configuration.headers) ? {} : { ...this.configuration.headers };
 		if (!headers['Content-Type']) {
-			headers['Content-Type'] = 'application/json';
+			headers['Content-Type'] = ContentTypes.JSON;
 		}
 		let body = '';
 		if (this.configuration.body && typeof this.configuration.body === 'object') {
-			if (headers['Content-Type'] === 'application/x-www-form-urlencoded') {
+			if (headers['Content-Type'] === ContentTypes.FormData) {
 				const encoded = new URLSearchParams();
 				Object.keys(this.configuration.body).forEach(key =>
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -133,41 +149,45 @@ export function http(url: string) {
  * HTTP functions using fromFetch
  */
 
+function convertResponse<T>({ headers: respHeaders, status, statusText, url }: Response, data?: T) {
+	const headers: { [key: string]: string | number | boolean } = {};
+	respHeaders.forEach((value, key) => {
+		headers[key] = value;
+	});
+
+	return {
+		data,
+		headers,
+		status,
+		statusText,
+		url
+	} as HttpResponse<T>;
+}
+
 function httpRequest<T>(url: string, options?: RequestInit) {
 	return fromFetch(url, options).pipe(
 		switchMap(async response => {
 			if (!response.ok) {
-				let error: Error | undefined;
+				let error: HttpError | undefined;
 				try {
 					const body = await response.text();
-					/* eslint-disable @typescript-eslint/no-explicit-any */
-					const err = new Error(body) as any;
-					const serialized = serializable<any>(response);
-					/* eslint-enable */
-					Object.keys(serialized).forEach(key => {
-						err[key] = serialized[key];
-					});
-					err.body = body;
-					error = err;
+					error = { ...new Error(body), ...convertResponse(response, body) } as HttpError;
 				} catch {
-					// Error parsing response, so we'll just throw the whole thing
-					throw response;
+					// Error parsing response, so we'll just use what we have
+					error = { ...new Error(), ...convertResponse(response) };
 				}
-				if (error) {
-					// We were able to extract the error details, so we'll throw this
-					// error object instead.
-					throw error;
-				}
+				throw error;
 			}
 
 			const text = await response.text();
+			let data: T;
 			try {
-				const json = JSON.parse(text);
-				return json as T;
+				data = JSON.parse(text) as T;
 			} catch {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				return (text as any) as T;
+				data = (text as any) as T;
 			}
+			return convertResponse(response, data);
 		})
 	);
 }
