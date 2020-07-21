@@ -1,5 +1,3 @@
-import produce from 'immer';
-import { isEmpty } from 'lodash';
 import { fromFetch } from 'rxjs/fetch';
 import { switchMap } from 'rxjs/operators';
 
@@ -38,9 +36,13 @@ export class Http {
 		if (!token) {
 			return this;
 		}
-		const config = produce(this.configuration, draft => {
-			draft.headers['Authorization'] = `Bearer ${token}`;
-		});
+		const config = {
+			...this.configuration,
+			headers: {
+				...this.configuration.headers,
+				Authorization: `Bearer ${token}`
+			}
+		};
 		return new Http(config);
 	}
 
@@ -50,21 +52,29 @@ export class Http {
 	}
 
 	contentType(type: ContentTypes) {
-		const config = produce(this.configuration, draft => {
-			draft.headers['Content-Type'] = type;
-		});
+		const config = {
+			...this.configuration,
+			headers: {
+				...this.configuration.headers,
+				'Content-Type': type
+			}
+		};
 		return new Http(config);
 	}
 
 	get<T>() {
-		const headers = isEmpty(this.configuration.headers) ? undefined : this.configuration.headers;
+		const headers = Object.keys(this.configuration.headers).length ? this.configuration.headers : undefined;
 		return httpRequest<T>(this.getFullUrl(), { headers, method: 'GET' });
 	}
 
 	header(name: string, value: string) {
-		const config = produce(this.configuration, draft => {
-			draft.headers[name] = value;
-		});
+		const config = {
+			...this.configuration,
+			headers: {
+				...this.configuration.headers,
+				[name]: value
+			}
+		};
 		return new Http(config);
 	}
 
@@ -76,26 +86,29 @@ export class Http {
 		return this.putOrPost<T>('PUT');
 	}
 
-	query(query: URLSearchParams | { [key: string]: string | string[] | boolean | number } | string) {
-		const config = produce(this.configuration, draft => {
-			if (query instanceof URLSearchParams) {
-				draft.query = (query as URLSearchParams).toString();
-			} else if (typeof query === 'string') {
-				draft.query = query;
-			} else {
-				const params = new URLSearchParams();
-				Object.keys(query).forEach(key => {
-					if (Array.isArray(query[key])) {
-						(query[key] as string[]).forEach(param => {
-							params.append(key, param);
-						});
-					} else {
-						params.append(key, query[key] as string);
-					}
-				});
-				draft.query = params.toString();
-			}
-		});
+	query(query: URLSearchParams | { [key: string]: string | string[] | boolean | number | number[] } | string) {
+		let queryString: string;
+		if (query instanceof URLSearchParams) {
+			queryString = (query as URLSearchParams).toString();
+		} else if (typeof query === 'string') {
+			queryString = query;
+		} else {
+			const params = new URLSearchParams();
+			Object.keys(query).forEach(key => {
+				if (Array.isArray(query[key])) {
+					(query[key] as string[]).forEach(param => {
+						params.append(key, param);
+					});
+				} else {
+					params.append(key, query[key] as string);
+				}
+			});
+			queryString = params.toString();
+		}
+		const config = {
+			...this.configuration,
+			query: queryString
+		};
 		return new Http(config);
 	}
 
@@ -118,7 +131,7 @@ export class Http {
 	}
 
 	private putOrPost<T>(method: 'PUT' | 'POST') {
-		const headers = isEmpty(this.configuration.headers) ? {} : { ...this.configuration.headers };
+		const headers = { ...this.configuration.headers };
 		if (!headers['Content-Type']) {
 			headers['Content-Type'] = ContentTypes.JSON;
 		}

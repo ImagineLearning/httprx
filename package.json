@@ -17,20 +17,17 @@
 		"start": "tsdx watch",
 		"build": "tsdx build",
 		"test": "tsdx test --watch",
+		"test:ci": "cross-env CI=true tsdx test --coverage",
 		"lint": "eslint \"src/**/*.{js,ts}\"",
 		"format": "prettier --config .prettierrc --write \"**/*.{js,json,ts}\"",
 		"prepack": "tsdx build"
 	},
-	"dependencies": {
-		"immer": "^7.0.5",
-		"lodash": "^4.17.19",
-		"lodash-es": "^4.17.15"
-	},
+	"dependencies": {},
 	"peerDependencies": {
 		"rxjs": "^6.6.0"
 	},
 	"devDependencies": {
-		"@types/lodash": "^4.14.157",
+		"cross-env": "^7.0.2",
 		"husky": "^4.2.5",
 		"jest": "^26.1.0",
 		"jest-fetch-mock": "^3.0.3",

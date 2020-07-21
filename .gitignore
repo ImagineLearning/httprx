@@ -1,12 +1,13 @@
 # Dependencies
-node_modules
+node_modules/
 
 # Build
-dist
+coverage/
+dist/
 *.tgz
 
 # IDE
-.vscode
+.vscode/
 
 # Misc
 *.log
