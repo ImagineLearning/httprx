@@ -9,7 +9,7 @@ describe('Http', () => {
 	beforeEach(() => {
 		jest.restoreAllMocks();
 		fetchMock.resetMocks();
-		fetchMock.once(JSON.stringify({ status: 200 }));
+		fetchMock.once(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' }, status: 200 });
 	});
 
 	describe('bearer(..)', () => {
@@ -94,6 +94,19 @@ describe('Http', () => {
 		});
 	});
 
+	describe('delete<T>()', () => {
+		it('makes a DELETE request', done => {
+			http(baseUrl)
+				.delete()
+				.subscribe(() => {
+					const [url, config] = fetchMock.mock.calls[0];
+					expect(url).toBe(baseUrl);
+					expect(config?.method).toBe('DELETE');
+					done();
+				}, done.fail);
+		});
+	});
+
 	describe('get<T>()', () => {
 		it('makes a GET request', done => {
 			http(baseUrl)
@@ -110,6 +123,30 @@ describe('Http', () => {
 			http(baseUrl)
 				.header('x-hello', 'world')
 				.get()
+				.subscribe(() => {
+					const [, config] = fetchMock.mock.calls[0];
+					expect(config?.headers).toEqual({ 'x-hello': 'world' });
+					done();
+				}, done.fail);
+		});
+	});
+
+	describe('head()', () => {
+		it('makes a HEAD request', done => {
+			http(baseUrl)
+				.head()
+				.subscribe(() => {
+					const [url, config] = fetchMock.mock.calls[0];
+					expect(url).toBe(baseUrl);
+					expect(config?.method).toBe('HEAD');
+					done();
+				}, done.fail);
+		});
+
+		it('includes headers', done => {
+			http(baseUrl)
+				.header('x-hello', 'world')
+				.head()
 				.subscribe(() => {
 					const [, config] = fetchMock.mock.calls[0];
 					expect(config?.headers).toEqual({ 'x-hello': 'world' });
@@ -139,6 +176,19 @@ describe('Http', () => {
 				expect(config?.headers).toBeUndefined();
 				done();
 			}, done.fail);
+		});
+	});
+
+	describe('patch<T>()', () => {
+		it('makes a PATCH request', done => {
+			http(baseUrl)
+				.patch()
+				.subscribe(() => {
+					const [url, config] = fetchMock.mock.calls[0];
+					expect(url).toBe(baseUrl);
+					expect(config?.method).toBe('PATCH');
+					done();
+				}, done.fail);
 		});
 	});
 

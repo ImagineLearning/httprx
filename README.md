@@ -36,7 +36,6 @@ http('https://example.com')
 		}
 		*/
 	});
-
 ```
 
 ## API
@@ -57,9 +56,7 @@ Adds the `Authorization` header to the headers collection with the specified bea
 Returns a new `Http` instance.
 
 ```ts
-http('https://example.com')
-	.bearer('my-bearer-token')
-	.post();
+http('https://example.com').bearer('my-bearer-token').post();
 
 // POST headers will include `Authorization: Bearer my-bearer-token`
 ```
@@ -92,11 +89,23 @@ http('https://example.com')
 Adds the appropriate `Content-Type` header to the headers collection and returns a new `Http` instance.
 
 ```ts
-http('https://example.com')
-	.contentType(ContentTypes.JSON)
-	.post();
+http('https://example.com').contentType(ContentTypes.JSON).post();
 
 // POST headers will include `Content-Type: application/json`
+```
+
+#### `Http.delete<T>()`
+
+Makes a DELETE request to the configured URL with the configured headers.
+Returns `Observable<HttpResponse<T>>`, where the `data` field of the `HttpResponse` object matches the type paramter `T`.
+
+```ts
+http('https://example.com')
+	.delete<{ success: boolean }>()
+	.subscribe(({ data }) => {
+		console.log(data);
+		// => { success: true }
+	});
 ```
 
 #### `Http.get<T>()`
@@ -113,18 +122,51 @@ http('https://example.com')
 	});
 ```
 
+#### `Http.head()`
+
+Makes a HEAD request to the configured URL with the configured headers.
+Returns `Observable<HttpResponse<undefined>>` since a HEAD request should not return any body content,
+so the `data` field of the `HttpResponse` object will never be defined.
+
+```ts
+http('https://example.com')
+	.head()
+	.subscribe(({ headers }) => {
+		console.log(headers['content-length']);
+		// => 648
+	});
+// HEAD request will not return any body content, but `headers`, `status`, `statusText`, and `url`
+// will be populated in the `HttpResponse` object.
+```
+
 #### `Http.header(name: string, value: string)`
 
 Add a header to the headers collection with the specified name and value.
 Returns a new `Http` instance.
 
 ```ts
-http('https://example.com')
-	.header('x-foo', 'bar')
-	.header('x-hello', 'world')
-	.get();
+http('https://example.com').header('x-foo', 'bar').header('x-hello', 'world').get();
 
 // GET headers will include `x-foo: bar` and `x-hello: world`
+```
+
+#### `Http.patch<T>()`
+
+Makes a PATCH request to the configured URL with the configured headers and body.
+If not specified, the `Content-Type` header will default to `application/json`.
+Returns `Observable<HttpResponse<T>>`, where the `data` field of the `HttpResponse` object matches the type parameter `T`.
+
+```ts
+http('https://example.com')
+	.body({ foo: 'bar' })
+	.patch<{ success: boolean }>()
+	.subscribe(({ data }) => {
+		console.log(data);
+		// => { success: true }
+	});
+// PATCH headers include `Content-Type: application/json`
+// PATCH payload is `{"foo":"bar"}`
+// `data` field in `HttpResponse` object is an object: { success: boolean }
 ```
 
 #### `Http.post<T>()`
@@ -174,9 +216,7 @@ If the `query` parameter is a `URLSearchParams` object, or a plain object of key
 If the `query` parameter is a string, you will need to ensure that it is properly encoded.
 
 ```ts
-http('https://example.com')
-	.query({ foo: 'bar', count: 1 })
-	.get();
+http('https://example.com').query({ foo: 'bar', count: 1 }).get();
 
 // GET request made to `https://example.com?foo=bar&count=1`
 ```

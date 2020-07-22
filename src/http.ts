@@ -62,9 +62,18 @@ export class Http {
 		return new Http(config);
 	}
 
+	delete<T>() {
+		return this.requestWithBody<T>('DELETE');
+	}
+
 	get<T>() {
 		const headers = Object.keys(this.configuration.headers).length ? this.configuration.headers : undefined;
 		return httpRequest<T>(this.getFullUrl(), { headers, method: 'GET' });
+	}
+
+	head() {
+		const headers = Object.keys(this.configuration.headers).length ? this.configuration.headers : undefined;
+		return httpRequest<undefined>(this.getFullUrl(), { headers, method: 'HEAD' });
 	}
 
 	header(name: string, value: string) {
@@ -78,12 +87,16 @@ export class Http {
 		return new Http(config);
 	}
 
+	patch<T>() {
+		return this.requestWithBody<T>('PATCH');
+	}
+
 	post<T>() {
-		return this.putOrPost<T>('POST');
+		return this.requestWithBody<T>('POST');
 	}
 
 	put<T>() {
-		return this.putOrPost<T>('PUT');
+		return this.requestWithBody<T>('PUT');
 	}
 
 	query(query: URLSearchParams | { [key: string]: string | string[] | boolean | number | number[] } | string) {
@@ -130,7 +143,7 @@ export class Http {
 		return url;
 	}
 
-	private putOrPost<T>(method: 'PUT' | 'POST') {
+	private requestWithBody<T>(method: 'DELETE' | 'PATCH' | 'POST' | 'PUT') {
 		const headers = { ...this.configuration.headers };
 		if (!headers['Content-Type']) {
 			headers['Content-Type'] = ContentTypes.JSON;
