@@ -34,7 +34,7 @@ export class Http {
 
 	bearer(token?: string) {
 		if (!token) {
-			return this;
+			return new Http(this.configuration);
 		}
 		const config = {
 			...this.configuration,
@@ -154,7 +154,7 @@ export class Http {
 	}
 }
 
-export function http(url: string) {
+export function http(url?: string) {
 	return new Http({ headers: {}, url });
 }
 
@@ -164,7 +164,7 @@ export function http(url: string) {
 
 function convertResponse<T>({ headers: respHeaders, status, statusText, url }: Response, data?: T) {
 	const headers: { [key: string]: string | number | boolean } = {};
-	respHeaders.forEach((value, key) => {
+	respHeaders?.forEach((value, key) => {
 		headers[key] = value;
 	});
 

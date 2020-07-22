@@ -1,10 +1,13 @@
 import fetchMock from 'jest-fetch-mock';
 import { ContentTypes, http } from './http';
+import { of } from 'rxjs';
+import * as Fetch from 'rxjs/fetch';
 
 describe('Http', () => {
 	const baseUrl = 'http://example.com';
 
 	beforeEach(() => {
+		jest.restoreAllMocks();
 		fetchMock.resetMocks();
 		fetchMock.once(JSON.stringify({ status: 200 }));
 	});
@@ -27,6 +30,17 @@ describe('Http', () => {
 			const original = http(baseUrl);
 			original.bearer('my-token');
 			original.get().subscribe(() => {
+				const [, config] = fetchMock.mock.calls[0];
+				expect(config?.headers).toBeUndefined();
+				done();
+			}, done.fail);
+		});
+
+		it('returns new Http instance without additional header if no token specified', done => {
+			const http1 = http(baseUrl);
+			const http2 = http1.bearer();
+			expect(http1).not.toBe(http2);
+			http2.get().subscribe(() => {
 				const [, config] = fetchMock.mock.calls[0];
 				expect(config?.headers).toBeUndefined();
 				done();
@@ -248,6 +262,17 @@ describe('Http', () => {
 				}, done.fail);
 		});
 
+		it('adds individual parameters when specified as array inside object', done => {
+			http(baseUrl)
+				.query({ foo: 'bar', baz: [10, 20] })
+				.get()
+				.subscribe(() => {
+					const [url] = fetchMock.mock.calls[0];
+					expect(url).toEqual(`${baseUrl}?foo=bar&baz=10&baz=20`);
+					done();
+				}, done.fail);
+		});
+
 		it('keeps string parameter as-is', done => {
 			http(baseUrl)
 				.query('foo=bar&baz=buzz')
@@ -255,6 +280,28 @@ describe('Http', () => {
 				.subscribe(() => {
 					const [url] = fetchMock.mock.calls[0];
 					expect(url).toBe(`${baseUrl}?foo=bar&baz=buzz`);
+					done();
+				}, done.fail);
+		});
+
+		it('adds params onto existing query in URL', done => {
+			http(`${baseUrl}?foo=bar`)
+				.query({ baz: 'buzz' })
+				.get()
+				.subscribe(() => {
+					const [url] = fetchMock.mock.calls[0];
+					expect(url).toBe(`${baseUrl}?foo=bar&baz=buzz`);
+					done();
+				}, done.fail);
+		});
+
+		it('appends to empty string if no URL specified', done => {
+			http()
+				.query({ foo: 'bar' })
+				.get()
+				.subscribe(() => {
+					const [url] = fetchMock.mock.calls[0];
+					expect(url).toBe('?foo=bar');
 					done();
 				}, done.fail);
 		});
@@ -331,6 +378,34 @@ describe('Http', () => {
 						const { data, status } = error;
 						expect(data).toBe(JSON.stringify({ message: 'Server error' }));
 						expect(status).toBe(500);
+						done();
+					}
+				);
+		});
+
+		it('handles errors while parsing error response', done => {
+			jest.spyOn(Fetch, 'fromFetch').mockImplementation((input: string | Request) =>
+				of(({
+					ok: false,
+					status: 500,
+					statusText: 'Server error',
+					text: jest.fn().mockRejectedValue('Error parsing response'),
+					url: input instanceof Request ? input.url : input
+				} as Partial<Response>) as Response)
+			);
+			http(baseUrl)
+				.get()
+				.subscribe(
+					() => {
+						// Shouldn't reach this
+						done.fail();
+					},
+					error => {
+						const { data, status, statusText, url } = error;
+						expect(data).toBeUndefined();
+						expect(status).toBe(500);
+						expect(statusText).toBe('Server error');
+						expect(url).toBe(baseUrl);
 						done();
 					}
 				);
