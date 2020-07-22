@@ -1,1 +1,1 @@
-export { ContentTypes, http as default } from './http';
+export { ContentTypes, HttpConfig, HttpError, HttpResponse, http as default } from './http';

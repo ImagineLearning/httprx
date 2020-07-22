@@ -22,14 +22,14 @@ export enum ContentTypes {
 	Zip = 'application/zip'
 }
 
-type HttpConfig = {
+export type HttpConfig = {
 	body?: object | string;
 	headers: { [key: string]: string };
 	query?: string;
 	url?: string;
 };
 
-type HttpResponse<T> = {
+export type HttpResponse<T> = {
 	data: T;
 	headers: { [key: string]: string };
 	status: number;
@@ -38,7 +38,7 @@ type HttpResponse<T> = {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type HttpError = Error & HttpResponse<any>;
+export type HttpError = Error & HttpResponse<any>;
 
 export class Http {
 	private configuration: HttpConfig;
