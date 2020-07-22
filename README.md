@@ -1,6 +1,200 @@
 # httprx
 
-A simple wrapper around RxJS's `fromFetch` function.
+A simple wrapper around [RxJS's `fromFetch`](https://rxjs.dev/api/fetch/fromFetch) function.
+
+## Installation
+
+You can install the httprx package using npm or yarn.
+[RxJS](https://github.com/ReactiveX/RxJS) is a peer dependency, so you will need to install that as well if you haven't already done so.
+
+```sh
+npm install @imaginelearning/httprx rxjs
+```
+
+Or
+
+```sh
+yarn add @imaginelearning/httprx rxjs
+```
+
+## Usage
+
+```ts
+import http from '@imaginelearning/httprx';
+
+http('https://example.com')
+	.get<string>()
+	.subscribe(response => {
+		console.log(response);
+		/* =>
+		{
+			data: 'hello world',
+			headers: { ... },
+			status: 200,
+			statusText: 'OK',
+			url: 'https://example.com'
+		}
+		*/
+	});
+
+```
+
+## API
+
+### `http(url: string)`
+
+Returns a new instance of the `Http` class, configured to make requests to the specified URL.
+
+### `Http` class
+
+This is the class that manages the configuration for your HTTP request.
+Instances of the `Http` class are immutable.
+Configuration functions--such as those for setting headers, body content, etc.--return a new instance of the `Http` class, and can be chained together.
+
+#### `Http.bearer(token?: string)`
+
+Adds the `Authorization` header to the headers collection with the specified bearer token.
+Returns a new `Http` instance.
+
+```ts
+http('https://example.com')
+	.bearer('my-bearer-token')
+	.post();
+
+// POST headers will include `Authorization: Bearer my-bearer-token`
+```
+
+#### `Http.body(content: object | string)`
+
+Sets the body content to be sent with a POST or PUT request and returns a new `Http` instance.
+If the `content` parameter is an object, it will formatted automatically based on the content type (JSON or URL encoded form data).
+If the `content` parameter is a string, you will need to ensure that it is properly formatted.
+
+```ts
+http('https://example.com)
+	.body({ foo: 'bar', count: 1 })
+	.post();
+
+// POST headers will include `Content-Type: application/json`
+// POST payload will be `{"foo":"bar","count":1}`
+
+http('https://example.com')
+	.contentType(ContentTypes.FormData)
+	.body({ foo: 'bar', count: 1 })
+	.post();
+
+// POST headers will include `Content-Type: application/x-www-form-urlencoded`
+// POST payload will be `foo=bar&count=1`
+```
+
+#### `Http.contentType(type: ContentTypes)`
+
+Adds the appropriate `Content-Type` header to the headers collection and returns a new `Http` instance.
+
+```ts
+http('https://example.com')
+	.contentType(ContentTypes.JSON)
+	.post();
+
+// POST headers will include `Content-Type: application/json`
+```
+
+#### `Http.get<T>()`
+
+Makes a GET request to the configured URL with the configured headers.
+Returns `Observable<HttpResponse<T>>`, where the `data` field of the `HttpResponse` object matches the type parameter `T`.
+
+```ts
+http('https://example.com')
+	.get<{ foo: string }>()
+	.subscribe(({ data }) => {
+		console.log(data);
+		// => { foo: 'bar' }
+	});
+```
+
+#### `Http.header(name: string, value: string)`
+
+Add a header to the headers collection with the specified name and value.
+Returns a new `Http` instance.
+
+```ts
+http('https://example.com')
+	.header('x-foo', 'bar')
+	.header('x-hello', 'world')
+	.get();
+
+// GET headers will include `x-foo: bar` and `x-hello: world`
+```
+
+#### `Http.post<T>()`
+
+Makes a POST request to the configured URL with the configured headers and body.
+If not specified, the `Content-Type` header will default to `application/json`.
+Returns `Observable<HttpResponse<T>>`, where the `data` field of the `HttpResponse` object matches the type parameter `T`.
+
+```ts
+http('https://example.com')
+	.body({ foo: 'bar' })
+	.post<string>()
+	.subscribe(({ data }) => {
+		console.log(data);
+		// => 'hello world'
+	});
+
+// POST headers include `Content-Type: application/json`
+// POST payload is `{"foo":"bar"}`
+// `data` field in `HttpResponse` object is a string
+```
+
+#### `Http.put<T>()`
+
+Makes a PUT request to the configured URL with the configured headers and body.
+If not specified, the `Content-Type` header will default to `application/json`.
+Returns `Observable<HttpResponse<T>>`, where the `data` field of the `HttpResponse` object matches the type parameter `T`.
+
+```ts
+http('https://example.com')
+	.body({ foo: 'bar' })
+	.put<string>()
+	.subscribe(({ data }) => {
+		console.log(data);
+		// => 'hello world'
+	});
+
+// PUT headers include `Content-Type: application/json`
+// PUT payload is `{"foo":"bar"}`
+// `data` field in `HttpResponse` object is a string
+```
+
+#### `Http.query(query: URLSearchParams | { [key: string]: string | string[] | boolean | number | number[] } | string)`
+
+Sets the query string for the request and returns a new `Http` instance.
+If the `query` parameter is a `URLSearchParams` object, or a plain object of key-value pairs, it will be converted to a URL encoded string.
+If the `query` parameter is a string, you will need to ensure that it is properly encoded.
+
+```ts
+http('https://example.com')
+	.query({ foo: 'bar', count: 1 })
+	.get();
+
+// GET request made to `https://example.com?foo=bar&count=1`
+```
+
+#### `Http.url(url: string)`
+
+Sets the URL to which the HTTP request will be made. Returns a new `Http` instance.
+
+```ts
+const http1 = http('https://example.com');
+const http2 = http1.url('https://example.org');
+
+http1.get();
+// Makes GET request to `https://example.com`
+
+http2.get();
+// Makes GET request to `https://example.org`
+```
 
 ## Local Development
 
@@ -27,3 +221,15 @@ The package is optimized and bundled with Rollup into multiple formats (CommonJS
 
 Runs the test watcher (Jest) in an interactive mode.
 By default, runs tests related to files changed since the last commit.
+
+### `yarn test:ci`
+
+Runs tests a single time and produces a code coverage report.
+
+### `yarn format`
+
+Runs the configured code formatter (Prettier) on all files in the project.
+
+### `yarn lint`
+
+Runs linting checks (ESLint) against all code files in the project.
