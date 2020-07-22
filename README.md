@@ -89,7 +89,7 @@ http('https://example.com')
 Adds the appropriate `Content-Type` header to the headers collection and returns a new `Http` instance.
 
 ```ts
-http('https://example.com').contentType(ContentTypes.JSON).post();
+http('https://example.com').contentType(ContentTypes.Json).post();
 
 // POST headers will include `Content-Type: application/json`
 ```

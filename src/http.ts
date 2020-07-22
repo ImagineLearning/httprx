@@ -2,9 +2,24 @@ import { fromFetch } from 'rxjs/fetch';
 import { switchMap } from 'rxjs/operators';
 
 export enum ContentTypes {
+	Anything = '*/*',
+	Bmp = 'image/bmp',
+	Css = 'text/css',
+	Csv = 'text/csv',
 	FormData = 'application/x-www-form-urlencoded',
-	JSON = 'application/json',
-	Text = 'text/plain'
+	Gif = 'image/gif',
+	Gzip = 'application/gzip',
+	Html = 'text/html',
+	Jpeg = 'image/jpeg',
+	Json = 'application/json',
+	MultipartFormData = 'multipart/form-data',
+	OctetStream = 'application/octet-stream',
+	Pdf = 'application/pdf',
+	Png = 'image/png',
+	Svg = 'image/svg+xml',
+	Text = 'text/plain',
+	Xml = 'application/xml',
+	Zip = 'application/zip'
 }
 
 type HttpConfig = {
@@ -146,7 +161,7 @@ export class Http {
 	private requestWithBody<T>(method: 'DELETE' | 'PATCH' | 'POST' | 'PUT') {
 		const headers = { ...this.configuration.headers };
 		if (!headers['Content-Type']) {
-			headers['Content-Type'] = ContentTypes.JSON;
+			headers['Content-Type'] = ContentTypes.Json;
 		}
 		let body = '';
 		if (this.configuration.body && typeof this.configuration.body === 'object') {
