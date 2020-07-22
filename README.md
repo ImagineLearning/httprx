@@ -50,13 +50,30 @@ This is the class that manages the configuration for your HTTP request.
 Instances of the `Http` class are immutable.
 Configuration functions--such as those for setting headers, body content, etc.--return a new instance of the `Http` class, and can be chained together.
 
+#### `Http.accept(...types: ContentTypes[])`
+
+Replaces the `Accept` header in the headers collection with the specified content type(s).
+Returns a new `Http` instance.
+
+_Note: If not set, the `Accept` header defaults to `application/json`._
+
+```ts
+http('https://example.com')
+	.accept(ContentTypes.Text, ContentTypes.Anything)
+	.get();
+
+// GET headers will include `Accept: text/plain, */*`
+```
+
 #### `Http.bearer(token?: string)`
 
 Adds the `Authorization` header to the headers collection with the specified bearer token.
 Returns a new `Http` instance.
 
 ```ts
-http('https://example.com').bearer('my-bearer-token').post();
+http('https://example.com')
+	.bearer('my-bearer-token')
+	.post();
 
 // POST headers will include `Authorization: Bearer my-bearer-token`
 ```

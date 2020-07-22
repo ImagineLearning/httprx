@@ -41,10 +41,28 @@ type HttpResponse<T> = {
 type HttpError = Error & HttpResponse<any>;
 
 export class Http {
-	private configuration: HttpConfig = { headers: {} };
+	private configuration: HttpConfig;
 
 	constructor(config: HttpConfig) {
-		this.configuration = config;
+		const headers =
+			!config.headers.Accept && !config.headers.accept
+				? {
+						...config.headers,
+						Accept: ContentTypes.Json
+				  }
+				: config.headers;
+		this.configuration = { ...config, headers };
+	}
+
+	accept(...types: ContentTypes[]) {
+		const config = {
+			...this.configuration,
+			headers: {
+				...this.configuration.headers,
+				Accept: types.join(', ')
+			}
+		};
+		return new Http(config);
 	}
 
 	bearer(token?: string) {
@@ -82,13 +100,11 @@ export class Http {
 	}
 
 	get<T>() {
-		const headers = Object.keys(this.configuration.headers).length ? this.configuration.headers : undefined;
-		return httpRequest<T>(this.getFullUrl(), { headers, method: 'GET' });
+		return httpRequest<T>(this.getFullUrl(), { headers: this.configuration.headers, method: 'GET' });
 	}
 
 	head() {
-		const headers = Object.keys(this.configuration.headers).length ? this.configuration.headers : undefined;
-		return httpRequest<undefined>(this.getFullUrl(), { headers, method: 'HEAD' });
+		return httpRequest<undefined>(this.getFullUrl(), { headers: this.configuration.headers, method: 'HEAD' });
 	}
 
 	header(name: string, value: string) {

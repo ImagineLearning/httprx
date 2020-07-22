@@ -1,5 +1,5 @@
 import fetchMock from 'jest-fetch-mock';
-import { ContentTypes, http } from './http';
+import { ContentTypes, http, Http } from './http';
 import { of } from 'rxjs';
 import * as Fetch from 'rxjs/fetch';
 
@@ -12,6 +12,69 @@ describe('Http', () => {
 		fetchMock.once(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' }, status: 200 });
 	});
 
+	describe('Http constructor', () => {
+		it("automatically sets the Accept header to 'application/json'", done => {
+			const http = new Http({ headers: {} });
+			http.get().subscribe(() => {
+				const [, config] = fetchMock.mock.calls[0];
+				expect(config?.headers).toEqual({ Accept: 'application/json' });
+				done();
+			}, done.fail);
+		});
+
+		it('keeps existing Accept header', done => {
+			const http = new Http({ headers: { Accept: ContentTypes.Text } });
+			http.get().subscribe(() => {
+				const [, config] = fetchMock.mock.calls[0];
+				expect(config?.headers).toEqual({ Accept: 'text/plain' });
+				done();
+			}, done.fail);
+		});
+
+		it('existing Accept header is case insensitive', done => {
+			const http = new Http({ headers: { accept: ContentTypes.Text } });
+			http.get().subscribe(() => {
+				const [, config] = fetchMock.mock.calls[0];
+				expect(config?.headers).toEqual({ accept: 'text/plain' });
+				done();
+			}, done.fail);
+		});
+	});
+
+	describe('accept(..)', () => {
+		it('sets the Accept header', done => {
+			http(baseUrl)
+				.accept(ContentTypes.Text)
+				.get()
+				.subscribe(() => {
+					const [, config] = fetchMock.mock.calls[0];
+					expect(config?.headers).toEqual({ Accept: 'text/plain' });
+					done();
+				}, done.fail);
+		});
+
+		it('allows multiple values for Accept header', done => {
+			http(baseUrl)
+				.accept(ContentTypes.Html, ContentTypes.Text, ContentTypes.Anything)
+				.get()
+				.subscribe(() => {
+					const [, config] = fetchMock.mock.calls[0];
+					expect(config?.headers).toEqual({ Accept: 'text/html, text/plain, */*' });
+					done();
+				}, done.fail);
+		});
+
+		it("doesn't mutate Http instance", done => {
+			const original = http(baseUrl);
+			original.accept(ContentTypes.Text);
+			original.get().subscribe(() => {
+				const [, config] = fetchMock.mock.calls[0];
+				expect(config?.headers).toEqual({ Accept: 'application/json' });
+				done();
+			}, done.fail);
+		});
+	});
+
 	describe('bearer(..)', () => {
 		it('adds header', done => {
 			http(baseUrl)
@@ -20,6 +83,7 @@ describe('Http', () => {
 				.subscribe(() => {
 					const [, config] = fetchMock.mock.calls[0];
 					expect(config?.headers).toEqual({
+						Accept: 'application/json',
 						Authorization: 'Bearer my-token'
 					});
 					done();
@@ -31,7 +95,9 @@ describe('Http', () => {
 			original.bearer('my-token');
 			original.get().subscribe(() => {
 				const [, config] = fetchMock.mock.calls[0];
-				expect(config?.headers).toBeUndefined();
+				expect(config?.headers).toEqual({
+					Accept: 'application/json'
+				});
 				done();
 			}, done.fail);
 		});
@@ -42,7 +108,9 @@ describe('Http', () => {
 			expect(http1).not.toBe(http2);
 			http2.get().subscribe(() => {
 				const [, config] = fetchMock.mock.calls[0];
-				expect(config?.headers).toBeUndefined();
+				expect(config?.headers).toEqual({
+					Accept: 'application/json'
+				});
 				done();
 			}, done.fail);
 		});
@@ -78,7 +146,7 @@ describe('Http', () => {
 				.post()
 				.subscribe(() => {
 					const [, config] = fetchMock.mock.calls[0];
-					expect(config?.headers).toEqual({ 'Content-Type': 'text/plain' });
+					expect(config?.headers).toEqual({ Accept: 'application/json', 'Content-Type': 'text/plain' });
 					done();
 				}, done.fail);
 		});
@@ -88,7 +156,7 @@ describe('Http', () => {
 			original.contentType(ContentTypes.Text);
 			original.post().subscribe(() => {
 				const [, config] = fetchMock.mock.calls[0];
-				expect(config?.headers).toEqual({ 'Content-Type': 'application/json' });
+				expect(config?.headers).toEqual({ Accept: 'application/json', 'Content-Type': 'application/json' });
 				done();
 			}, done.fail);
 		});
@@ -125,7 +193,7 @@ describe('Http', () => {
 				.get()
 				.subscribe(() => {
 					const [, config] = fetchMock.mock.calls[0];
-					expect(config?.headers).toEqual({ 'x-hello': 'world' });
+					expect(config?.headers).toEqual({ Accept: 'application/json', 'x-hello': 'world' });
 					done();
 				}, done.fail);
 		});
@@ -149,7 +217,7 @@ describe('Http', () => {
 				.head()
 				.subscribe(() => {
 					const [, config] = fetchMock.mock.calls[0];
-					expect(config?.headers).toEqual({ 'x-hello': 'world' });
+					expect(config?.headers).toEqual({ Accept: 'application/json', 'x-hello': 'world' });
 					done();
 				}, done.fail);
 		});
@@ -163,7 +231,7 @@ describe('Http', () => {
 				.get()
 				.subscribe(() => {
 					const [, config] = fetchMock.mock.calls[0];
-					expect(config?.headers).toEqual({ foo: 'bar', baz: 'buzz' });
+					expect(config?.headers).toEqual({ Accept: 'application/json', foo: 'bar', baz: 'buzz' });
 					done();
 				}, done.fail);
 		});
@@ -173,7 +241,7 @@ describe('Http', () => {
 			original.header('foo', 'bar');
 			original.get().subscribe(() => {
 				const [, config] = fetchMock.mock.calls[0];
-				expect(config?.headers).toBeUndefined();
+				expect(config?.headers).toEqual({ Accept: 'application/json' });
 				done();
 			}, done.fail);
 		});
@@ -221,7 +289,7 @@ describe('Http', () => {
 				.post()
 				.subscribe(() => {
 					const [, config] = fetchMock.mock.calls[0];
-					expect(config?.headers).toEqual({ 'Content-Type': 'application/json' });
+					expect(config?.headers).toEqual({ Accept: 'application/json', 'Content-Type': 'application/json' });
 					done();
 				}, done.fail);
 		});
@@ -232,7 +300,7 @@ describe('Http', () => {
 				.post()
 				.subscribe(() => {
 					const [, config] = fetchMock.mock.calls[0];
-					expect(config?.headers).toEqual({ 'Content-Type': 'text/plain' });
+					expect(config?.headers).toEqual({ Accept: 'application/json', 'Content-Type': 'text/plain' });
 					done();
 				}, done.fail);
 		});
