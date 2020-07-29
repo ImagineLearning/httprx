@@ -4,7 +4,14 @@ A simple wrapper around [RxJS's `fromFetch`](https://rxjs.dev/api/fetch/fromFetc
 
 ## Installation
 
-You can install the httprx package using npm or yarn.
+The **httprx** package is available on [GitHub Package Registry](https://github.com/ImagineLearning/httprx/packages).
+To install it, you will need to configure your project by adding a `.npmrc` file to the project root with the following content:
+
+```
+@imaginelearning:registry=https://npm.pkg.github.com
+```
+
+You can then install it using npm or yarn.
 [RxJS](https://github.com/ReactiveX/RxJS) is a peer dependency, so you will need to install that as well if you haven't already done so.
 
 ```sh
@@ -85,7 +92,7 @@ If the `content` parameter is an object, it will formatted automatically based o
 If the `content` parameter is a string, you will need to ensure that it is properly formatted.
 
 ```ts
-http('https://example.com)
+http('https://example.com')
 	.body({ foo: 'bar', count: 1 })
 	.post();
 
@@ -106,7 +113,9 @@ http('https://example.com')
 Adds the appropriate `Content-Type` header to the headers collection and returns a new `Http` instance.
 
 ```ts
-http('https://example.com').contentType(ContentTypes.Json).post();
+http('https://example.com')
+	.contentType(ContentTypes.Json)
+	.post();
 
 // POST headers will include `Content-Type: application/json`
 ```
@@ -114,7 +123,7 @@ http('https://example.com').contentType(ContentTypes.Json).post();
 #### `Http.delete<T>()`
 
 Makes a DELETE request to the configured URL with the configured headers.
-Returns `Observable<HttpResponse<T>>`, where the `data` field of the `HttpResponse` object matches the type paramter `T`.
+Returns `Observable<HttpResponse<T>>`, where the `data` field of the `HttpResponse` object matches the type parameter `T`.
 
 ```ts
 http('https://example.com')
@@ -152,7 +161,9 @@ http('https://example.com')
 		console.log(headers['content-length']);
 		// => 648
 	});
-// HEAD request will not return any body content, but `headers`, `status`, `statusText`, and `url`
+
+// HEAD request will not return any body content,
+// but `headers`, `status`, `statusText`, and `url`
 // will be populated in the `HttpResponse` object.
 ```
 
@@ -162,7 +173,10 @@ Add a header to the headers collection with the specified name and value.
 Returns a new `Http` instance.
 
 ```ts
-http('https://example.com').header('x-foo', 'bar').header('x-hello', 'world').get();
+http('https://example.com')
+	.header('x-foo', 'bar')
+	.header('x-hello', 'world')
+	.get();
 
 // GET headers will include `x-foo: bar` and `x-hello: world`
 ```
@@ -181,6 +195,7 @@ http('https://example.com')
 		console.log(data);
 		// => { success: true }
 	});
+
 // PATCH headers include `Content-Type: application/json`
 // PATCH payload is `{"foo":"bar"}`
 // `data` field in `HttpResponse` object is an object: { success: boolean }
@@ -233,7 +248,9 @@ If the `query` parameter is a `URLSearchParams` object, or a plain object of key
 If the `query` parameter is a string, you will need to ensure that it is properly encoded.
 
 ```ts
-http('https://example.com').query({ foo: 'bar', count: 1 }).get();
+http('https://example.com')
+	.query({ foo: 'bar', count: 1 })
+	.get();
 
 // GET request made to `https://example.com?foo=bar&count=1`
 ```
@@ -261,11 +278,11 @@ Below is a list of commands you will probably find useful.
 
 ### `yarn start`
 
-Runs the project in development/watch mode. Your project will be rebuilt upon changes. TSDX has a special logger for you convenience. Error messages are pretty printed and formatted for compatibility VS Code's Problems tab.
+Runs the project in development/watch mode. The project will be rebuilt upon changes. TSDX has a special logger for your convenience. Error messages are pretty printed and formatted for compatibility with VS Code's Problems tab.
 
 <img src="https://user-images.githubusercontent.com/4060187/52168303-574d3a00-26f6-11e9-9f3b-71dbec9ebfcb.gif" width="600" />
 
-Your library will be rebuilt if you make edits.
+The library will be rebuilt if you make edits.
 
 ### `yarn build`
 
