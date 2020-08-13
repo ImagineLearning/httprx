@@ -463,12 +463,22 @@ describe('Http', () => {
 			fetchMock.resetMocks();
 		});
 
-		it('returns properly parsed JSON', done => {
+		it('returns properly parsed JSON for object', done => {
 			fetchMock.once('{"hello":"world"}');
 			http(baseUrl)
 				.get<{ hello: string }>()
 				.subscribe(({ data: { hello } }) => {
 					expect(hello).toEqual('world');
+					done();
+				}, done.fail);
+		});
+
+		it('returns properly parsed JSON for array', done => {
+			fetchMock.once('["hello", "world"]');
+			http(baseUrl)
+				.get<{ hello: string }>()
+				.subscribe(({ data }) => {
+					expect(data).toEqual(['hello', 'world']);
 					done();
 				}, done.fail);
 		});
@@ -479,6 +489,16 @@ describe('Http', () => {
 				.get<string>()
 				.subscribe(({ data }) => {
 					expect(data).toBe('hello world');
+					done();
+				}, done.fail);
+		});
+
+		it('handles error parsing JSON', done => {
+			fetchMock.once('{"hello":"world"');
+			http(baseUrl)
+				.get<string>()
+				.subscribe(({ data }) => {
+					expect(data).toBe('{"hello":"world"');
 					done();
 				}, done.fail);
 		});
