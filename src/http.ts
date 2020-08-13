@@ -235,11 +235,12 @@ function httpRequest<T>(url: string, options?: RequestInit) {
 				}
 				throw error;
 			}
-
 			const text = await response.text();
+			const isJson = !!text && (text[0] === '{' || text[0] === '[');
 			let data: T;
 			try {
-				data = JSON.parse(text) as T;
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				data = (isJson ? JSON.parse(text) : (text as any)) as T;
 			} catch {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				data = (text as any) as T;
