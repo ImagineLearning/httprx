@@ -181,6 +181,23 @@ http('https://example.com')
 // GET headers will include `x-foo: bar` and `x-hello: world`
 ```
 
+#### `Http.options<T>()`
+
+Makes an OPTIONS request to the configured URL with the configured headers.
+Returns `Observable<HttpResponse<T>>`, where the `data` field of the `HttpResponse` object matches the type parameter `T`.
+
+```ts
+http('https://example.com')
+	.header('Access-Control-Request-Method', 'GET')
+	.options()
+	.subscribe(({ data, headers }) => {
+		console.log(data);
+		console.log(headers);
+		// => undefined
+		// => { 'Access-Control-Allow-Methods': 'OPTIONS, GET, HEAD, POST', ... }
+	});
+```
+
 #### `Http.patch<T>()`
 
 Makes a PATCH request to the configured URL with the configured headers and body.
