@@ -247,6 +247,19 @@ describe('Http', () => {
 		});
 	});
 
+	describe('options<T>(..)', () => {
+		it('makes an OPTIONS request', done => {
+			http(baseUrl)
+				.options()
+				.subscribe(() => {
+					const [url, config] = fetchMock.mock.calls[0];
+					expect(url).toBe(baseUrl);
+					expect(config?.method).toBe('OPTIONS');
+					done();
+				}, done.fail);
+		});
+	});
+
 	describe('patch<T>()', () => {
 		it('makes a PATCH request', done => {
 			http(baseUrl)

@@ -118,6 +118,10 @@ export class Http {
 		return new Http(config);
 	}
 
+	options<T>() {
+		return httpRequest<T>(this.getFullUrl(), { headers: this.configuration.headers, method: 'OPTIONS' });
+	}
+
 	patch<T>() {
 		return this.requestWithBody<T>('PATCH');
 	}
