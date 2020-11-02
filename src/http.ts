@@ -42,8 +42,9 @@ export type HttpError = Error & HttpResponse<any>;
 
 export class Http {
 	private configuration: HttpConfig;
+	errorTransformMethod: any;
 
-	constructor(config: HttpConfig) {
+	constructor(config: HttpConfig, errorTransformMethod: any = null) {
 		const headers =
 			!config.headers.Accept && !config.headers.accept
 				? {
@@ -52,6 +53,7 @@ export class Http {
 				  }
 				: config.headers;
 		this.configuration = { ...config, headers };
+		this.errorTransformMethod = errorTransformMethod;
 	}
 
 	accept(...types: ContentTypes[]) {
@@ -79,6 +81,13 @@ export class Http {
 		return new Http(config);
 	}
 
+	errorTransform(method: Function) {
+		if (!method) {
+			return new Http(this.configuration);
+		}
+		return new Http(this.configuration, method);
+	}
+
 	body(content: object | string) {
 		const config = { ...this.configuration, body: content };
 		return new Http(config);
@@ -100,11 +109,15 @@ export class Http {
 	}
 
 	get<T>() {
-		return httpRequest<T>(this.getFullUrl(), { headers: this.configuration.headers, method: 'GET' });
+		return httpRequest<T>(this.getFullUrl(), { headers: this.configuration.headers, method: 'GET' }, this.errorTransformMethod);
 	}
 
 	head() {
-		return httpRequest<undefined>(this.getFullUrl(), { headers: this.configuration.headers, method: 'HEAD' });
+		return httpRequest<undefined>(
+			this.getFullUrl(),
+			{ headers: this.configuration.headers, method: 'HEAD' },
+			this.errorTransformMethod
+		);
 	}
 
 	header(name: string, value: string) {
@@ -119,7 +132,7 @@ export class Http {
 	}
 
 	options<T>() {
-		return httpRequest<T>(this.getFullUrl(), { headers: this.configuration.headers, method: 'OPTIONS' });
+		return httpRequest<T>(this.getFullUrl(), { headers: this.configuration.headers, method: 'OPTIONS' }, this.errorTransformMethod);
 	}
 
 	patch<T>() {
@@ -198,7 +211,7 @@ export class Http {
 		} else if (this.configuration.body && typeof this.configuration.body === 'string') {
 			body = this.configuration.body;
 		}
-		return httpRequest<T>(this.getFullUrl(), { body, headers, method });
+		return httpRequest<T>(this.getFullUrl(), { body, headers, method }, this.errorTransformMethod);
 	}
 }
 
@@ -225,9 +238,9 @@ function convertResponse<T>({ headers: respHeaders, status, statusText, url }: R
 	} as HttpResponse<T>;
 }
 
-function httpRequest<T>(url: string, options?: RequestInit) {
+function httpRequest<T>(url: string, options?: RequestInit, errorTransform: any = null) {
 	return fromFetch(url, options).pipe(
-		switchMap(async response => {
+		switchMap(async (response: any) => {
 			if (!response.ok) {
 				let error: HttpError | undefined;
 				try {
@@ -237,7 +250,7 @@ function httpRequest<T>(url: string, options?: RequestInit) {
 					// Error parsing response, so we'll just use what we have
 					error = { ...new Error(), ...convertResponse(response) };
 				}
-				throw error;
+				throw errorTransform !== null ? errorTransform(error) : error;
 			}
 			const text = await response.text();
 			const isJson = !!text && (text[0] === '{' || text[0] === '[');
