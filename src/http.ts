@@ -41,10 +41,10 @@ export type HttpResponse<T> = {
 export type HttpError = Error & HttpResponse<any>;
 
 export class Http {
+	errorTransformMethod: Function | undefined;
 	private configuration: HttpConfig;
-	errorTransformMethod: any;
 
-	constructor(config: HttpConfig, errorTransformMethod: any = null) {
+	constructor(config: HttpConfig) {
 		const headers =
 			!config.headers.Accept && !config.headers.accept
 				? {
@@ -53,7 +53,6 @@ export class Http {
 				  }
 				: config.headers;
 		this.configuration = { ...config, headers };
-		this.errorTransformMethod = errorTransformMethod;
 	}
 
 	accept(...types: ContentTypes[]) {
@@ -82,10 +81,11 @@ export class Http {
 	}
 
 	errorTransform(method: Function) {
-		if (!method) {
-			return new Http(this.configuration);
+		const http = new Http(this.configuration);
+		if (method) {
+			http.errorTransformMethod = method;
 		}
-		return new Http(this.configuration, method);
+		return http;
 	}
 
 	body(content: object | string) {

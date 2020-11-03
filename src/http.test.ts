@@ -162,6 +162,17 @@ describe('Http', () => {
 		});
 	});
 
+	describe('errorTransform(..)', () => {
+		it('sets the member errorTransformMethod', () => {
+			function testTransform(error: any) {
+				return error;
+			}
+
+			const instance = http(baseUrl).errorTransform(testTransform);
+			expect(instance.errorTransformMethod).toEqual(testTransform);
+		});
+	});
+
 	describe('delete<T>()', () => {
 		it('makes a DELETE request', done => {
 			http(baseUrl)
