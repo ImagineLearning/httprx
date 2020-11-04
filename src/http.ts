@@ -1,5 +1,6 @@
+import { throwError } from 'rxjs';
 import { fromFetch } from 'rxjs/fetch';
-import { switchMap } from 'rxjs/operators';
+import { catchError, switchMap } from 'rxjs/operators';
 
 export enum ContentTypes {
 	Anything = '*/*',
@@ -22,11 +23,14 @@ export enum ContentTypes {
 	Zip = 'application/zip'
 }
 
-export type HttpConfig = {
+export type ErrorTransform<TIn, TOut> = (error: TIn) => TOut;
+
+export type HttpConfig<TError, TTransform> = {
 	body?: object | string;
 	headers: { [key: string]: string };
 	query?: string;
 	url?: string;
+	errorTransform?: ErrorTransform<TError, TTransform>;
 };
 
 export type HttpResponse<T> = {
@@ -40,11 +44,10 @@ export type HttpResponse<T> = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type HttpError = Error & HttpResponse<any>;
 
-export class Http {
-	errorTransformMethod: Function | undefined;
-	private configuration: HttpConfig;
+export class Http<TError, TTranform> {
+	private configuration: HttpConfig<TError, TTranform>;
 
-	constructor(config: HttpConfig) {
+	constructor(config: HttpConfig<TError, TTranform>) {
 		const headers =
 			!config.headers.Accept && !config.headers.accept
 				? {
@@ -80,12 +83,9 @@ export class Http {
 		return new Http(config);
 	}
 
-	errorTransform(method: Function) {
-		const http = new Http(this.configuration);
-		if (method) {
-			http.errorTransformMethod = method;
-		}
-		return http;
+	errorTransform<TIn, TOut>(method: ErrorTransform<TIn, TOut>) {
+		const config = { ...this.configuration, errorTransform: method };
+		return new Http(config);
 	}
 
 	body(content: object | string) {
@@ -109,14 +109,18 @@ export class Http {
 	}
 
 	get<T>() {
-		return httpRequest<T>(this.getFullUrl(), { headers: this.configuration.headers, method: 'GET' }, this.errorTransformMethod);
+		return httpRequest<T, TError, TTranform>(
+			this.getFullUrl(),
+			{ headers: this.configuration.headers, method: 'GET' },
+			this.configuration.errorTransform
+		);
 	}
 
 	head() {
-		return httpRequest<undefined>(
+		return httpRequest<undefined, TError, TTranform>(
 			this.getFullUrl(),
 			{ headers: this.configuration.headers, method: 'HEAD' },
-			this.errorTransformMethod
+			this.configuration.errorTransform
 		);
 	}
 
@@ -132,7 +136,11 @@ export class Http {
 	}
 
 	options<T>() {
-		return httpRequest<T>(this.getFullUrl(), { headers: this.configuration.headers, method: 'OPTIONS' }, this.errorTransformMethod);
+		return httpRequest<T, TError, TTranform>(
+			this.getFullUrl(),
+			{ headers: this.configuration.headers, method: 'OPTIONS' },
+			this.configuration.errorTransform
+		);
 	}
 
 	patch<T>() {
@@ -211,7 +219,7 @@ export class Http {
 		} else if (this.configuration.body && typeof this.configuration.body === 'string') {
 			body = this.configuration.body;
 		}
-		return httpRequest<T>(this.getFullUrl(), { body, headers, method }, this.errorTransformMethod);
+		return httpRequest<T, TError, TTranform>(this.getFullUrl(), { body, headers, method }, this.configuration.errorTransform);
 	}
 }
 
@@ -238,9 +246,9 @@ function convertResponse<T>({ headers: respHeaders, status, statusText, url }: R
 	} as HttpResponse<T>;
 }
 
-function httpRequest<T>(url: string, options?: RequestInit, errorTransform: any = null) {
+function httpRequest<TData, TError, TTransform>(url: string, options?: RequestInit, errorTransform?: ErrorTransform<TError, TTransform>) {
 	return fromFetch(url, options).pipe(
-		switchMap(async (response: any) => {
+		switchMap(async response => {
 			if (!response.ok) {
 				let error: HttpError | undefined;
 				try {
@@ -250,19 +258,23 @@ function httpRequest<T>(url: string, options?: RequestInit, errorTransform: any 
 					// Error parsing response, so we'll just use what we have
 					error = { ...new Error(), ...convertResponse(response) };
 				}
-				throw errorTransform !== null ? errorTransform(error) : error;
+				throw error;
 			}
 			const text = await response.text();
 			const isJson = !!text && (text[0] === '{' || text[0] === '[');
-			let data: T;
+			let data: TData;
 			try {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				data = (isJson ? JSON.parse(text) : (text as any)) as T;
+				data = (isJson ? JSON.parse(text) : (text as any)) as TData;
 			} catch {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				data = (text as any) as T;
+				data = (text as any) as TData;
 			}
 			return convertResponse(response, data);
+		}),
+		catchError(error => {
+			const transformed = errorTransform?.(error) ?? error;
+			return throwError(transformed);
 		})
 	);
 }
