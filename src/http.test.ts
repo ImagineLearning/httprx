@@ -1,7 +1,7 @@
 import fetchMock from 'jest-fetch-mock';
-import { ContentTypes, http, Http } from './http';
 import { of } from 'rxjs';
 import * as Fetch from 'rxjs/fetch';
+import { ContentTypes, http, Http, HttpError } from './http';
 
 describe('Http', () => {
 	const baseUrl = 'http://example.com';
@@ -159,6 +159,32 @@ describe('Http', () => {
 				expect(config?.headers).toEqual({ Accept: 'application/json', 'Content-Type': 'application/json' });
 				done();
 			}, done.fail);
+		});
+	});
+
+	describe('errorTransform<TIn, TOut>(..)', () => {
+		it("doesn't mutate Http instance", () => {
+			const original = http(baseUrl);
+			const updated = original.errorTransform(jest.fn());
+			expect(original).not.toBe(updated);
+		});
+
+		it('transforms error', done => {
+			fetchMock.resetMocks();
+			fetchMock.once(JSON.stringify({ success: false }), { headers: { 'Content-Type': 'application/json' }, status: 500 });
+
+			http(baseUrl)
+				.errorTransform((err: HttpError) => `Transformed Error: ${err.status}`)
+				.get()
+				.subscribe(
+					() => {
+						done.fail();
+					},
+					error => {
+						expect(error).toBe('Transformed Error: 500');
+						done();
+					}
+				);
 		});
 	});
 
