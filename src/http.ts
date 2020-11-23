@@ -44,10 +44,10 @@ export type HttpResponse<T> = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type HttpError = Error & HttpResponse<any>;
 
-export class Http<TError, TTranform> {
-	private configuration: HttpConfig<TError, TTranform>;
+export class Http<TError, TTransform> {
+	private configuration: HttpConfig<TError, TTransform>;
 
-	constructor(config: HttpConfig<TError, TTranform>) {
+	constructor(config: HttpConfig<TError, TTransform>) {
 		const headers =
 			!config.headers.Accept && !config.headers.accept
 				? {
@@ -109,7 +109,7 @@ export class Http<TError, TTranform> {
 	}
 
 	get<T>() {
-		return httpRequest<T, TError, TTranform>(
+		return httpRequest<T, TError, TTransform>(
 			this.getFullUrl(),
 			{ headers: this.configuration.headers, method: 'GET' },
 			this.configuration.errorTransform
@@ -117,7 +117,7 @@ export class Http<TError, TTranform> {
 	}
 
 	head() {
-		return httpRequest<undefined, TError, TTranform>(
+		return httpRequest<undefined, TError, TTransform>(
 			this.getFullUrl(),
 			{ headers: this.configuration.headers, method: 'HEAD' },
 			this.configuration.errorTransform
@@ -136,7 +136,7 @@ export class Http<TError, TTranform> {
 	}
 
 	options<T>() {
-		return httpRequest<T, TError, TTranform>(
+		return httpRequest<T, TError, TTransform>(
 			this.getFullUrl(),
 			{ headers: this.configuration.headers, method: 'OPTIONS' },
 			this.configuration.errorTransform
@@ -219,7 +219,7 @@ export class Http<TError, TTranform> {
 		} else if (this.configuration.body && typeof this.configuration.body === 'string') {
 			body = this.configuration.body;
 		}
-		return httpRequest<T, TError, TTranform>(this.getFullUrl(), { body, headers, method }, this.configuration.errorTransform);
+		return httpRequest<T, TError, TTransform>(this.getFullUrl(), { body, headers, method }, this.configuration.errorTransform);
 	}
 }
 
@@ -260,15 +260,30 @@ function httpRequest<TData, TError, TTransform>(url: string, options?: RequestIn
 				}
 				throw error;
 			}
-			const text = await response.text();
-			const isJson = !!text && (text[0] === '{' || text[0] === '[');
+
 			let data: TData;
-			try {
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				data = (isJson ? JSON.parse(text) : (text as any)) as TData;
-			} catch {
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				data = (text as any) as TData;
+			const contentTypes = response.headers.get('content-type')?.split(',');
+			if (
+				contentTypes?.includes(ContentTypes.Bmp) ||
+				contentTypes?.includes(ContentTypes.Gif) ||
+				contentTypes?.includes(ContentTypes.Jpeg) ||
+				contentTypes?.includes(ContentTypes.Pdf) ||
+				contentTypes?.includes(ContentTypes.Png) ||
+				contentTypes?.includes(ContentTypes.Gzip) ||
+				contentTypes?.includes(ContentTypes.OctetStream) ||
+				contentTypes?.includes(ContentTypes.Zip)
+			) {
+				data = ((await response.blob()) as unknown) as TData;
+			} else {
+				const text = await response.text();
+				const isJson = !!text && (text[0] === '{' || text[0] === '[');
+				try {
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					data = (isJson ? JSON.parse(text) : (text as any)) as TData;
+				} catch {
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					data = (text as any) as TData;
+				}
 			}
 			return convertResponse(response, data);
 		}),
