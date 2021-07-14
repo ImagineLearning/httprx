@@ -155,7 +155,7 @@ export class Http<TError, TTransform> {
 		return this.requestWithBody<T>('PUT');
 	}
 
-	query(query: URLSearchParams | { [key: string]: string | string[] | boolean | number | number[] } | string) {
+	query(query: URLSearchParams | { [key: string]: string | string[] | boolean | number | number[] | undefined | null } | string) {
 		let queryString: string;
 		if (query instanceof URLSearchParams) {
 			queryString = (query as URLSearchParams).toString();
