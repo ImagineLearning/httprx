@@ -13,6 +13,8 @@ export enum ContentTypes {
 	Html = 'text/html',
 	Jpeg = 'image/jpeg',
 	Json = 'application/json',
+	Mp3 = 'audio/mp3',
+	Mpeg = 'audio/mpeg',
 	MultipartFormData = 'multipart/form-data',
 	OctetStream = 'application/octet-stream',
 	Pdf = 'application/pdf',
@@ -267,6 +269,8 @@ function httpRequest<TData, TError, TTransform>(url: string, options?: RequestIn
 				contentTypes?.includes(ContentTypes.Bmp) ||
 				contentTypes?.includes(ContentTypes.Gif) ||
 				contentTypes?.includes(ContentTypes.Jpeg) ||
+				contentTypes?.includes(ContentTypes.Mp3) ||
+				contentTypes?.includes(ContentTypes.Mpeg) ||
 				contentTypes?.includes(ContentTypes.Pdf) ||
 				contentTypes?.includes(ContentTypes.Png) ||
 				contentTypes?.includes(ContentTypes.Gzip) ||
